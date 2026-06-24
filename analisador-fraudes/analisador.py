@@ -1,13 +1,15 @@
 import csv
 from fraud_analyzer import analyze
 
-total_transacoes = 0
-transacoes_aprovadas = 0
-transacoes_suspeitas = 0
-transacoes_bloqueadas = 0
+resumo_por_location = {}
 
 resultados = []
 resultados_bloqueados = []
+
+total_geral = 0
+aprovadas_geral = 0
+suspeitas_geral = 0
+bloqueadas_geral = 0
 
 with open("transacoes.csv", "r", encoding="utf-8") as arquivo:
     reader = csv.DictReader(arquivo)
@@ -27,17 +29,30 @@ with open("transacoes.csv", "r", encoding="utf-8") as arquivo:
             "status": resultado["status"]
         })
 
-        total_transacoes += 1
+        if location not in resumo_por_location:
+            resumo_por_location[location] = {
+                "total": 0,
+                "aprovadas": 0,
+                "suspeitas": 0,
+                "bloqueadas": 0
+            }
+
+        resumo_por_location[location]["total"] += 1
+        total_geral += 1
+
         if resultado["status"] == "APPROVED":
-            transacoes_aprovadas += 1
+            resumo_por_location[location]["aprovadas"] += 1
+            aprovadas_geral += 1
         elif resultado["status"] == "SUSPICIOUS":
-            transacoes_suspeitas += 1
+            resumo_por_location[location]["suspeitas"] += 1
+            suspeitas_geral += 1
         elif resultado["status"] == "BLOCKED":
-            transacoes_bloqueadas += 1
+            resumo_por_location[location]["bloqueadas"] += 1
+            bloqueadas_geral += 1
 
         if resultado["status"] == "BLOCKED":
             resultados_bloqueados.append({
-                "number": total_transacoes,
+                "number":  total_geral,
                 "amount": amount,
                 "location": location,
                 "device": device,
@@ -49,7 +64,7 @@ with open("resultado.csv", "w", newline="", encoding="utf-8") as arquivo:
     
     writer.writerow(["amount", "location", "device", "riskScore", "status"])
     
-    for resultado in resultados:
+    for resultado in resultados:        
         writer.writerow([
             resultado["amount"],
             resultado["location"],
@@ -58,15 +73,19 @@ with open("resultado.csv", "w", newline="", encoding="utf-8") as arquivo:
             resultado["status"]
         ])  
 
-print("=== Relatório de Análise de Fraudes ===")
-print(f"Total de transações: {total_transacoes}")
-print(f"Aprovadas: {transacoes_aprovadas}")
-print(f"Suspeitas: {transacoes_suspeitas}")
-print(f"Bloqueadas: {transacoes_bloqueadas} \n")
+print("=== Relatório Geral de Análise de Fraudes ===")
+print(f"  Total Processado: {total_geral}")
+print(f"  Aprovadas: {aprovadas_geral}")
+print(f"  Suspeitas: {suspeitas_geral}")
+print(f"  Bloqueadas: {bloqueadas_geral} \n")
 
-for resultado in resultados_bloqueados:
-    print(f"Transação {resultado['number']}:")
-    print(f"  Amount: {resultado['amount']}")
-    print(f"  Location: {resultado['location']}")
-    print(f"  Device: {resultado['device']}")
-    print(f"  Risk Score: {resultado['riskScore']} \n")
+print("=== Detalhes das Transações Bloqueadas ===")
+if not resultados_bloqueados:
+    print("Nenhuma transação foi bloqueada.")
+else:
+    for resultado in resultados_bloqueados:
+        print(f"Transação Nº {resultado['number']}:")
+        print(f"  Amount: {resultado['amount']}")
+        print(f"  Location: {resultado['location']}")
+        print(f"  Device: {resultado['device']}")
+        print(f"  Risk Score: {resultado['riskScore']} \n")
